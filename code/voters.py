@@ -1,12 +1,11 @@
-from __future__ import division, print_function
-
-import os
+from __future__ import division, print_function, absolute_import
 
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 
 import econtools.metrics as mt
+
+from clean.gather import data_prep_president, data_prep_midterm
 
 
 def differential_pres():
@@ -32,17 +31,13 @@ def differential_pres():
 
     diff = parse_vra_coeff(reg.beta)
     ci_low = parse_vra_coeff(reg.summary['CI_low'])
-    ci_high = parse_vra_coeff(reg.summary['CI_high'])
     band = diff - ci_low
 
     fig, ax = plt.subplots()
 
-
     ax.errorbar(diff.index, diff.values, yerr=band.values,
                 linestyle='-', fmt='o', capsize=0)
     # ax.plot(diff.index, diff.values, '-o')
-    # ax.scatter(ci_low.index, ci_low.values, marker='s', color='r', alpha=.5)
-    # ax.scatter(ci_high.index, ci_high.values, marker='s', color='r', alpha=.5)
 
     ax.axhline(0, color='0.5', linestyle='-')
     ax.axvline(1965, linestyle='-', color='g')
@@ -76,13 +71,6 @@ def differential_pres():
 
     plt.show()
     return df
-
-
-def parse_vra_coeff(s):
-    match = 'vra_'
-    vra_vars = s.filter(like=match)
-    vra_vars = vra_vars.rename(index=lambda x: int(x.replace(match, '')))
-    return vra_vars
 
 
 def differential_midterm():
@@ -131,7 +119,14 @@ def differential_midterm():
     return reg
 
 
-def main():
+def parse_vra_coeff(s):
+    match = 'vra_'
+    vra_vars = s.filter(like=match)
+    vra_vars = vra_vars.rename(index=lambda x: int(x.replace(match, '')))
+    return vra_vars
+
+
+def plot_raw_timeseries():
     df = data_prep_president()
 
     avg_vra = df[df['had_vra']].groupby('year')['turnout_vap'].mean()
@@ -161,180 +156,6 @@ def main():
     plt.legend(loc=4)
     # plt.tight_layout()
     plt.show()
-
-
-def data_all():
-    df = data_prep_midterm()
-    df['midterm'] = 1
-
-    df2 = data_prep_president()
-    df = df.append(df2, ignore_index=True)
-    df['midterm'] = df['midterm'].fillna(0)
-
-    df = df.sort_values(['county_name', 'year'])
-    df = df.reset_index(drop=True)
-
-    df['uncontested'] = df['uncontested'].fillna(0)
-
-    return df
-
-
-def data_prep_midterm():
-    df = prep_early()
-    df2 = prep_2014()
-    df = df.append(df2, ignore_index=True)
-
-    df.loc[df['turnout_vap'] > 1, 'turnout_vap'] = np.nan
-
-    df['year'] = df['year'].astype(int)
-
-    df = df[df['state_abbrev'] == 'NC'].copy()
-    vra = vra_counties()
-    df['had_vra'] = df['county_name'].isin(vra)
-
-    # Fill missings
-    df['uncontested'] = df['uncontested'].fillna(0)
-    df = df.sort_values(['county_name', 'year'])
-    for col in ('pct_white', 'pct_65plus'):
-        df[col] = df[col].fillna(method='ffill')
-
-    return df
-
-def data_prep_president():
-    df = prep_early_pres()
-    df = df.rename(columns={
-        'abbreviation': 'state_abbrev',
-        'statename': 'state_name',
-        'fipscounty': 'county_fips',
-        'countyname': 'county_name'
-    })
-    df = df[df['state_abbrev'] == 'NC'].copy()
-
-    df2 = prep_2016()
-    df = df.append(df2, ignore_index=True)
-
-    had_vra = vra_counties()
-    df['had_vra'] = df['county_name'].isin(had_vra)
-
-    df['year'] = df['year'].astype(int)
-
-    for col in ('pct_white', 'pct_65plus'):
-        df[col] = df[col].fillna(method='ffill')
-
-    return df
-
-def prep_early_pres():
-    df = pd.read_stata(data_path('merged_vote_rain.dta'))
-
-    rain_vars = df.filter(regex='rain').columns
-    df = df.drop(rain_vars, axis=1)
-
-    df = df.rename(columns={
-        'countyname': 'county_name',
-        'turnout': 'turnout_vap',
-    })
-
-    df['turnout_vap'] /= 100
-
-    return df
-
-def prep_early():
-    df = pd.read_stata(data_path('merged_vote_rain_midterm.dta'))
-    df = df.drop(df.filter(regex='rain').columns, axis=1)
-    df = df.rename(columns={
-        'abbreviation': 'state_abbrev',
-        'statename': 'state_name',
-        'fipscounty': 'county_fips',
-        'countyname': 'county_name'
-    })
-
-    df['turnout_vap'] = df['vote'] / df['elig']
-
-    df['county_fips'] = df['county_fips'].astype(int).astype(str).str.zfill(5)
-
-    return df
-
-def prep_2014():
-    df = pd.read_stata(data_path('county_turnout_just_2014.dta'))
-    fips = (
-        df['state_fips'].astype(str).str.zfill(2) +
-        df['county_fips'].astype(str).str.zfill(3)
-    )
-    df['county_fips'] = fips
-    df['year'] = df['year'].astype(np.int64)
-
-    return df
-
-def prep_2016():
-    filepath = data_path('NC_2016.csv')
-    df = pd.read_csv(filepath)
-    df = df.rename(columns={
-        'COUNTY': 'county_name',
-    })
-
-    df = df[df['county_name'].notnull()]
-
-    df['county_name'] = df['county_name'].str.title()
-    df.loc[df['county_name'] == 'Mcdowell', 'county_name'] = 'McDowell'
-
-    df['turnout_vap'] = df['VOTED'] / df['TOTAL']
-
-    df = df[['county_name', 'turnout_vap']].copy()
-
-    df['year'] = 2016
-    df['state_abbrev'] = 'NC'
-
-    return df
-
-def vra_counties():
-    county_name = (
-        'Anson',
-        'Beaufort',
-        'Bertie',
-        'Bladen',
-        'Camden',
-        'Caswell',
-        'Chowan',
-        'Cleveland',
-        'Craven',
-        'Cumberland',
-        'Edgecombe',
-        'Franklin',
-        'Gaston',
-        'Gates',
-        'Granville',
-        'Greene',
-        'Guilford',
-        'Halifax',
-        'Harnett',
-        'Hertford',
-        'Hoke',
-        'Jackson',
-        'Lee',
-        'Lenoir',
-        'Martin',
-        'Nash',
-        'Northampton',
-        'Onslow',
-        'Pasquotank',
-        'Perquimans',
-        'Person',
-        'Pitt',
-        'Robeson',
-        'Rockingham',
-        'Scotland',
-        'Union',
-        'Vance',
-        'Washington',
-        'Wayne',
-        'Wilson',
-    )
-    return county_name
-
-
-def data_path(*args):
-    return os.path.expanduser(
-        os.path.join('~', 'research', 'vra', 'data', *args))
 
 
 if __name__ == '__main__':
