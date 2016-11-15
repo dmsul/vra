@@ -102,7 +102,7 @@ def data_prep_president():
 
     df['year'] = df['year'].astype(int)
 
-    for col in ('pct_white', 'pct_65plus'):
+    for col in ('pct_65plus',):
         df[col] = df[col].fillna(method='ffill')
 
     return df

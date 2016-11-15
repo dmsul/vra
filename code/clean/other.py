@@ -3,6 +3,7 @@ from __future__ import division, print_function, absolute_import
 import pandas as pd
 
 from util.env import data_path
+from clean.ncga import voter_demogs_2016
 
 
 def prep_2014():
@@ -35,12 +36,27 @@ def prep_2016():
     df['county_name'] = df['county_name'].str.title()
     df.loc[df['county_name'] == 'Mcdowell', 'county_name'] = 'McDowell'
 
-    df['turnout_vap'] = df['voted'] / df['registered']
+    demogs = _prep_2016_vap()
+    df = df.join(demogs, on='county_name')
 
-    df = df[['county_name', 'turnout_vap', 'voted', 'registered']].copy()
+    df['turnout_vap'] = df['voted'] / df['elig']
+
+    keep_vars = ['county_name', 'turnout_vap', 'voted', 'registered',
+                 'pct_white', 'elig']
+    df = df[keep_vars].copy()
 
     df['year'] = 2016
     df['state_abbrev'] = 'NC'
+
+    return df
+
+def _prep_2016_vap():
+    df = voter_demogs_2016()
+    df = df.groupby('County')[['Total', 'White']].sum()
+    df['pct_white'] = 100 * df['White'] / df['Total']
+    df = df.rename(columns={'Total': 'elig'})
+
+    df.index.name = 'county_name'
 
     return df
 
