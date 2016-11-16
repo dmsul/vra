@@ -19,6 +19,8 @@ def prep_2014():
         'cvap_est': 'elig',
     })
 
+    df['vote'] = df['elig'] * df['turnout_vap']
+
     return df
 
 
@@ -28,7 +30,7 @@ def prep_2016():
     df = df.rename(columns={
         'COUNTY': 'county_name',
         'TOTAL': 'registered',
-        'VOTED': 'voted',
+        'VOTED': 'vote',
     })
 
     df = df[df['county_name'].notnull()]
@@ -39,9 +41,9 @@ def prep_2016():
     demogs = _prep_2016_vap()
     df = df.join(demogs, on='county_name')
 
-    df['turnout_vap'] = df['voted'] / df['elig']
+    df['turnout_vap'] = df['vote'] / df['elig']
 
-    keep_vars = ['county_name', 'turnout_vap', 'voted', 'registered',
+    keep_vars = ['county_name', 'turnout_vap', 'vote', 'registered',
                  'pct_white', 'elig']
     df = df[keep_vars].copy()
 

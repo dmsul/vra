@@ -5,14 +5,15 @@ import matplotlib.pyplot as plt
 
 import econtools.metrics as mt
 
-from clean.gather import data_prep_president, data_prep_midterm
+from clean.gather import data_clean
 
 
 def differential_pres():
-    df = data_prep_president()
+    df = data_clean(midterm=False)
 
     years = df['year'].unique()
     year0 = years[0]
+    df['high_black'] = df['pct_white'] < 50
     for y in years:
         df['vra_{}'.format(y)] = (
             (df['had_vra']) & (df['year'] == y)).astype(int)
@@ -24,7 +25,7 @@ def differential_pres():
 
     vra_vars = df.filter(like='vra_').columns.tolist()
     _I = df.filter(like='_I').columns.tolist()
-    pct_vars = ['pct_white', 'pct_65plus']
+    pct_vars = []
     reg = mt.reg(df, 'turnout_vap', vra_vars + _I + pct_vars,
                  addcons=True, cluster='county_name')
     print(reg.summary)
@@ -74,7 +75,7 @@ def differential_pres():
 
 
 def differential_midterm():
-    df = data_prep_midterm()
+    df = data_clean(midterm=True)
 
     df = df.sort_values(['county_name', 'year'])
 
@@ -127,10 +128,11 @@ def parse_vra_coeff(s):
 
 
 def plot_raw_timeseries():
-    df = data_prep_president()
+    df = data_clean(midterm=False)
+    df['low_white'] = df['pct_white'] < 50
 
-    avg_vra = df[df['had_vra']].groupby('year')['turnout_vap'].mean()
-    avg_oth = df[~df['had_vra']].groupby('year')['turnout_vap'].mean()
+    avg_vra = df[df['low_white']].groupby('year')['turnout_vap'].mean()
+    avg_oth = df[~df['low_white']].groupby('year')['turnout_vap'].mean()
 
     fig, ax = plt.subplots()
     ax.plot(avg_oth.index, avg_oth.values, '-o', label='Non-VRA counties')

@@ -11,9 +11,9 @@ from clean.other import prep_2014, prep_2016, vra_counties
 
 
 def extrapolate_elig():
-    df = data_all()
-    year0 = 2008
-    yearT = 2014
+    df = data_combine()
+    year0 = 1980
+    yearT = 2016
     df = df[(df['year'] <= yearT) & (df['year'] >= year0)].copy()
     df['t'] = df['year'] - 1980
     df['t2'] = df['t'] ** 2
@@ -46,23 +46,62 @@ def extrapolate_elig():
     return new_elig
 
 
-def data_all():
-    df = data_prep_midterm()
-    df['midterm'] = 1
+def data_clean(midterm=None):
+    df = data_combine()
+    for col in ('elig', 'pct_white', 'pct_65plus'):
+        df = _extrap_col(df, col)
 
-    df2 = data_prep_president()
+    df['turnout_vap'] = df['vote'] / df['elig']
+
+    if midterm is None:
+        return df
+    elif midterm:
+        return df[df['midterm']].copy()
+    else:
+        return df[~df['midterm']].copy()
+
+def _extrap_col(df, col):
+    df = df.set_index(['county_name', 'year']).sort_index()
+    extrapolated = _extrap(df, col).stack('year')
+    df.loc[extrapolated.index, col] = extrapolated
+    df = df.reset_index()
+    return df
+
+def _extrap(df, col):
+    s = df.loc[pd.IndexSlice[:, [2000, 2010]], col]
+    s = s.unstack('year')
+    annual_change = (s[2010] - s[2000]) / 10
+
+    new_years = [2012, 2014, 2016]
+    new_df = pd.DataFrame(np.zeros((len(annual_change), len(new_years))),
+                          columns=new_years,
+                          index=annual_change.index)
+    new_df.columns.name = 'year'
+
+    for year in new_years:
+        new_df.loc[:, year] = s[2010] + annual_change * (year - 2010)
+
+    return new_df
+
+
+def data_combine():
+    """ Append presidential and midterm election data """
+    df = combine_midterm()
+    df2 = combine_president()
     df = df.append(df2, ignore_index=True)
-    df['midterm'] = df['midterm'].fillna(0)
 
     df = df.sort_values(['county_name', 'year'])
     df = df.reset_index(drop=True)
 
     df['uncontested'] = df['uncontested'].fillna(0)
 
+    vra = vra_counties()
+    df['had_vra'] = df['county_name'].isin(vra)
+
     return df
 
 
-def data_prep_midterm():
+def combine_midterm():
     df = prep_early()
     df2 = prep_2014()
     df = df.append(df2, ignore_index=True)
@@ -72,8 +111,6 @@ def data_prep_midterm():
     df['year'] = df['year'].astype(int)
 
     df = df[df['state_abbrev'] == 'NC'].copy()
-    vra = vra_counties()
-    df['had_vra'] = df['county_name'].isin(vra)
 
     # Fill missings
     df['uncontested'] = df['uncontested'].fillna(0)
@@ -81,32 +118,20 @@ def data_prep_midterm():
     for col in ('pct_white', 'pct_65plus'):
         df[col] = df[col].fillna(method='ffill')
 
+    df['midterm'] = True
+
     return df
 
 
-def data_prep_president():
+def combine_president():
     df = prep_early_pres()
-    df = df.rename(columns={
-        'abbreviation': 'state_abbrev',
-        'statename': 'state_name',
-        'fipscounty': 'county_fips',
-        'countyname': 'county_name'
-    })
-    df = df[df['state_abbrev'] == 'NC'].copy()
-
     df2 = prep_2016()
     df = df.append(df2, ignore_index=True)
 
-    had_vra = vra_counties()
-    df['had_vra'] = df['county_name'].isin(had_vra)
-
-    df['year'] = df['year'].astype(int)
-
-    for col in ('pct_65plus',):
-        df[col] = df[col].fillna(method='ffill')
+    df['midterm'] = False
 
     return df
 
 
 if __name__ == '__main__':
-    df = extrapolate_elig()
+    df = data_clean()
