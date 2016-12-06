@@ -1,0 +1,5 @@
+### MATPLOTLIBRC FORMAT
+backend      : Qt4Agg
+backend.qt4 : PyQt4        # PyQt4 | PySide
+axes.formatter.useoffset      : False
+font.sans-serif: Arial
