@@ -4,9 +4,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import econtools.metrics as mt
+from econtools import save_cli
 
 from util.env import out_path
-from util.style import navy
+from util.style import navy, maroon
 from clean.gather import data_clean
 
 
@@ -48,11 +49,6 @@ def es_differential(midterm=False, use_controls=False, standalone=False,
     ax.errorbar(diff.index, diff.values, yerr=band.values,
                 linestyle='-', fmt='o', capsize=0, color=navy)
 
-    # ax.axhline(0, color='0.5', linestyle='-')
-    vra_y0, vra_yT = 1965, 2014.75
-    ax.axvline(vra_y0, linestyle='-', color='g')
-    ax.axvline(vra_yT, linestyle='-', color='r')
-
     ticks = np.arange(df['year'].min(), df['year'].max() + 1, 8) + 4
     ax.set_xticks(ticks)
     ax.margins(x=0.05)
@@ -81,13 +77,20 @@ def es_differential(midterm=False, use_controls=False, standalone=False,
                      textcoords='offset points')
 
     # VRA start and finish lines
+    vra_y0, vra_yT = 1965, 2014.75
+    ax.axvline(vra_y0, linestyle='-', color='k')
+    ax.axvline(vra_yT, linestyle='-', color='k')
+
     if midterm:
-        ylevel = -.195
+        if use_controls:
+            ylevel = -.195
+        else:
+            ylevel = -.295
     elif midterm is False:
         if use_controls:
             ylevel = -.195
         else:
-            ylevel = -.195
+            ylevel = -.245
     else:
         ylevel = -.195
     ax.annotate("VRA In Force", xy=((vra_y0 + vra_yT)/2 - 2, ylevel),
@@ -99,7 +102,7 @@ def es_differential(midterm=False, use_controls=False, standalone=False,
                 arrowprops=dict(facecolor='r', arrowstyle='<->'))
 
     if save:
-        filepath = _set_figure_path(midterm, use_controls)
+        filepath = _set_figure_path(midterm, use_controls, standalone)
         fig.savefig(filepath, bbox_inches='tight')
         plt.close()
     else:
@@ -133,43 +136,62 @@ def parse_vra_coeff(s):
     return vra_vars
 
 
-def plot_raw_timeseries():
+def plot_raw_timeseries(save=False, standalone=False):
     df = data_clean(midterm=False)
     df['low_white'] = df['pct_white'] < 50
 
-    avg_vra = df[df['low_white']].groupby('year')['turnout_vap'].mean()
-    avg_oth = df[~df['low_white']].groupby('year')['turnout_vap'].mean()
+    var = 'had_vra'
+    avg_vra = df[df[var]].groupby('year')['turnout_vap'].mean()
+    avg_oth = df[~df[var]].groupby('year')['turnout_vap'].mean()
 
     fig, ax = plt.subplots()
-    ax.plot(avg_oth.index, avg_oth.values, '-o', label='Non-VRA counties')
-    ax.plot(avg_vra.index, avg_vra.values, '-o', label='VRA counties')
-    ax.axvline(1965, color='k')
-    ax.axvline(2013, color='k')
+    ax.plot(avg_oth.index, avg_oth.values, linestyle='-',
+            marker='o', color=navy, label='Non-VRA counties')
+    ax.plot(avg_vra.index, avg_vra.values, linestyle='-',
+            marker='^', color=maroon, label='VRA counties')
 
-    ylevel = .17
-    ax.annotate("VRA In Force", xy=((2013 + 1965)/2 - 2, ylevel),
-                xytext=(-7, 0),
+    # VRA start and finish lines
+    vra_y0, vra_yT = 1965, 2014.75
+    ax.axvline(vra_y0, linestyle='-', color='k')
+    ax.axvline(vra_yT, linestyle='-', color='k')
+    ylevel = .35
+    vra_y0, vra_yT = 1965, 2014.75
+    ax.annotate("VRA In Force", xy=((vra_y0 + vra_yT)/2 - 2, ylevel),
+                xytext=(-11, 0),
                 textcoords='offset points')
     ax.annotate('',
-                xy=((1965, ylevel - .01)),
-                xytext=((2013, ylevel - .01)),
+                xy=((vra_y0, ylevel - .005)),
+                xytext=((vra_yT, ylevel - .005)),
                 arrowprops=dict(facecolor='r', arrowstyle='<->'))
 
-    ax.set_xticks(np.arange(df['year'].min(), df['year'].max() + 1, 8))
+    ticks = np.arange(df['year'].min(), df['year'].max() + 1, 8) + 4
+
+    # Axes formatting
+    ax.set_xticks(ticks)
+
     ax.margins(x=0.05)
-    ax.grid(True, alpha=.5)
-    ax.set_ylabel("Voter Turnout (Median across Counties)")
-    fig.suptitle("The Voting Rights Act in North Carolina", fontsize=14)
+    ax.grid(True, alpha=.2, color=navy, linestyle='-')
+    ax.tick_params(top='off', bottom='off', left='off', right='off')
+
+    ax.set_ylabel("Voter Turnout (Mean across Counties)")
+
+    if standalone:
+        fig.suptitle("The Voting Rights Act in North Carolina", fontsize=14)
 
     plt.legend(loc=4)
-    # plt.tight_layout()
-    plt.show()
+
+    if save:
+        filepath = out_path('ts_had_vra_mean.pdf')
+        fig.savefig(filepath, bbox_inches='tight')
+    else:
+        plt.show()
 
 
 if __name__ == '__main__':
-    if 0:
+    save = save_cli()
+    if 1:
         for midterm in (True, False):
             for control in (True, False):
                 es_differential(midterm=midterm, use_controls=control,
-                                save=True)
-    es_differential(midterm=None)
+                                save=save)
+    plot_raw_timeseries(save=save)
