@@ -5,7 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 import econtools.metrics as mt
-from econtools import save_cli
+from econtools import save_cli, binscatter, force_list
 
 from util.env import out_path
 from util.style import navy, maroon
@@ -26,15 +26,15 @@ def main_many_plots(save=False):
 
 
 def main_old_plot(save=False):
-    plot_frd(2008, 2012)
+    plot_frd(1964, 1968)
 
 
 def plot_frd(year0, yearT):
     bad_c = ('Stokes', 'Gaston', 'Cleveland')
     df = data_clean(midterm=False)
     pre_years = [1948, 1952, 1956, 1960]
-    pre_years = [year0]
-    post_years = [yearT]  # 1976, 1980, 1984, 1988]
+    pre_years = force_list(year0)
+    post_years = force_list(yearT)  # 1976, 1980, 1984, 1988)
     df['t'] = np.nan
     df.loc[df['year'].isin(pre_years), 't'] = 0
     df.loc[df['year'].isin(post_years), 't'] = 1
@@ -98,9 +98,9 @@ def plot_frd(year0, yearT):
     ax.set_xlabel("Difference between 1964 Turnout and VRA Threshold")
     ax.set_ylabel("Change in Turnout")
 
-    # fig2, ax2 = plt.subplots()
-    # bx, by = binscatter(plot_df['turnout_vap'], plot_df['diff'], n=30)
-    # ax2.scatter(bx, by)
+    fig2, ax2 = plt.subplots()
+    bx, by = binscatter(plot_df['turnout_vap'], plot_df['diff'], n=15)
+    ax2.scatter(bx, by)
 
     plt.show()
 
@@ -109,4 +109,4 @@ def plot_frd(year0, yearT):
 
 if __name__ == "__main__":
     save = save_cli()
-    main_many_plots(save=save)
+    main_old_plot(save=save)
