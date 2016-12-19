@@ -56,7 +56,7 @@ def es_differential(midterm=False, use_controls=False, standalone=False,
     ax.grid(True, alpha=.2, color=navy, linestyle='-')
     ax.tick_params(top='off', bottom='off', left='off', right='off')
 
-    ax.set_ylabel("Differential Between VRA and non-VRA Counties")
+    ax.set_ylabel("Difference in Turnout, VRA vs. non-VRA Counties")
 
     if standalone:
         fig.suptitle(
@@ -189,9 +189,10 @@ def plot_raw_timeseries(save=False, standalone=False):
 
 if __name__ == '__main__':
     save = save_cli()
-    if 1:
+    if 0:
         for midterm in (True, False):
             for control in (True, False):
                 es_differential(midterm=midterm, use_controls=control,
                                 save=save)
-    plot_raw_timeseries(save=save)
+    else:
+        es_differential(midterm=False, use_controls=True, save=save)
