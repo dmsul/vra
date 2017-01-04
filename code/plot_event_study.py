@@ -11,6 +11,13 @@ from util.style import navy
 from clean.gather import data_clean
 
 
+def main_run_all(save=False):
+    for midterm in (True, False):
+        for control in (True, False):
+            es_differential(midterm=midterm, use_controls=control,
+                            save=save)
+
+
 def es_differential(midterm=False, use_controls=False, standalone=False,
                     save=False):
     df = data_clean(midterm=midterm)
@@ -128,7 +135,6 @@ def _set_figure_path(midterm, use_controls, standalone):
 
     return filepath.format(infix)
 
-
 def parse_vra_coeff(s):
     match = 'vra_'
     vra_vars = s.filter(like=match)
@@ -138,10 +144,4 @@ def parse_vra_coeff(s):
 
 if __name__ == '__main__':
     save = save_cli()
-    if 0:
-        for midterm in (True, False):
-            for control in (True, False):
-                es_differential(midterm=midterm, use_controls=control,
-                                save=save)
-    else:
-        es_differential(midterm=False, use_controls=True, save=save)
+    main_run_all(save=save)
