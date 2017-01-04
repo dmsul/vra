@@ -60,12 +60,24 @@ def plot_raw_timeseries(midterm=False, save=False, standalone=False):
     plt.legend(loc=4)
 
     if save:
-        filepath = out_path('ts_had_vra_mean.pdf')
+        filepath = _set_filepath(midterm)
         fig.savefig(filepath, bbox_inches='tight')
     else:
         plt.show()
 
+def _set_filepath(midterm):
+    filepath = out_path('ts_had_vra_mean')
+    if midterm:
+        filepath += '_midterm'
+    filepath += '.pdf'
+
+    return filepath
+
 
 if __name__ == '__main__':
     save = save_cli()
-    plot_raw_timeseries(save=save)
+    if save:
+        plot_raw_timeseries(midterm=True, save=save)
+        plot_raw_timeseries(midterm=False, save=save)
+    else:
+        plot_raw_timeseries(save=save)
