@@ -9,7 +9,6 @@ from clean.gather import data_clean, vra_counties
 
 def rd_data(year0, yearT):
     df = data_clean(midterm=False)
-    pre_years = [1948, 1952, 1956, 1960]
     pre_years = force_list(year0)
     post_years = force_list(yearT)  # 1976, 1980, 1984, 1988)
     df['t'] = np.nan
@@ -22,8 +21,10 @@ def rd_data(year0, yearT):
     diff.index = diff.index.droplevel('t')
 
     dfidx = df.set_index('county_name')
-    white_16 = dfidx.loc[dfidx['year'] == 2016, 'pct_white']
-    diff = diff.to_frame('diff').join(white_16)
+    white = dfidx.loc[dfidx['year'] == year0, 'pct_white']
+    diff = diff.to_frame('diff').join(white)
+    age = dfidx.loc[dfidx['year'] == year0, 'pct_65plus']
+    diff = diff.join(age)
 
     vra_years = df['year'].isin([1964])
     plot_df = df[vra_years].groupby('county_name')['turnout_vap'].min()
