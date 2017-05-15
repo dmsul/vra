@@ -3,11 +3,11 @@ from __future__ import division, print_function, absolute_import
 import econtools.metrics as mt
 from econtools import save_cli
 
-from plot_rd import frd_data
+from analysis.rd import rd_data
 
 
-def plot_frd(year0, yearT):
-    df = frd_data(year0, yearT)
+def reg_rd(year0, yearT):
+    df = rd_data(year0, yearT)
 
     diff_mean = df['diff'].mean()
     df['diff'] -= diff_mean
@@ -21,4 +21,4 @@ def plot_frd(year0, yearT):
 
 if __name__ == "__main__":
     save = save_cli()
-    plot_frd(2012, 2016)
+    reg_rd(2012, 2016)
