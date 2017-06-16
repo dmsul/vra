@@ -16,6 +16,14 @@ def load_precinct(year=2016):
     df = pd.read_table(filepath, header=0)
 
     df = df.rename(columns=lambda x: x.lower())
+    rename = {
+        'contest name': 'contest',
+        'total votes': 'total',
+        'one stop': 'onestop',
+        'absentee by mail': 'absentee',
+        'election day': 'electionday',
+    }
+    df = df.rename(columns=rename)
 
     return df
 
@@ -61,6 +69,7 @@ def txt_path_by_year(year):
         raise ValueError
 
     return filepath
+
 
 def load_xwalk():
     """

@@ -77,4 +77,5 @@ def plot_frd(year0, yearT):
 
 if __name__ == "__main__":
     save = save_cli()
-    main_old_plot(save=save)
+    # main_old_plot(save=save)
+    plot_frd(2008, 2012)
